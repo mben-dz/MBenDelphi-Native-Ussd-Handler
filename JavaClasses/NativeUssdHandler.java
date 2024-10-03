@@ -8,7 +8,6 @@ public class NativeUssdHandler {
 
     private TelephonyManager delphiTelephonyMgr; // A reference to the TelephonyManager passed from Delphi
     private NativeUssdLogger delphiLogger; // A reference to the logger passed from Delphi (optional)
-    private NativeUssdResponseCallback javaUssdCallback;
     private Handler mainHandler; // Handler tied to the main looper
 
     // Constructor with TelephonyManager and NativeUssdLogger parameters (logger can be optional)
@@ -19,11 +18,10 @@ public class NativeUssdHandler {
         this.delphiTelephonyMgr = aTelephonyMgr;
         this.delphiLogger = aLogger; // Logger can be null
         this.mainHandler = new Handler(Looper.getMainLooper()); // Initialize main looper handler
-        this.javaUssdCallback = new NativeUssdResponseCallback(aLogger, this.mainHandler); // Pass the handler
     }
 
-    // Method to send a USSD request, adding better error handling
-    public void javaSendUssdRequest(String aUssdCode) {
+    // Method to send a USSD request with an externally created NativeUssdResponseCallback
+    public void javaSendUssdRequest(String aUssdCode, NativeUssdResponseCallback aCallback) {
         if (aUssdCode == null || aUssdCode.isEmpty()) {
             if (delphiLogger != null) {
                 delphiLogger.logMessage("Invalid USSD code: cannot be null or empty");
@@ -31,13 +29,17 @@ public class NativeUssdHandler {
             return; // Abort if the USSD code is invalid
         }
 
+        if (aCallback == null) {
+            throw new IllegalArgumentException("NativeUssdResponseCallback cannot be null");
+        }
+
         if (delphiLogger != null) {
             delphiLogger.logMessage("Java is Sending USSD Request: " + aUssdCode);
         }
 
         try {
-            // Use the shared handler for USSD requests and callbacks
-            delphiTelephonyMgr.sendUssdRequest(aUssdCode, this.javaUssdCallback, this.mainHandler);
+            // Use the callback passed from Delphi and the shared handler
+            delphiTelephonyMgr.sendUssdRequest(aUssdCode, aCallback, this.mainHandler);
         } catch (Exception e) {
             if (delphiLogger != null) {
                 delphiLogger.logMessage("Error while sending USSD request: " + e.getMessage());
@@ -70,6 +72,11 @@ public class NativeUssdHandler {
         }
 
         return strBuilderReversed.toString();
+    }
+
+    // Method to return the main handler to be accessed in Delphi
+    public Handler getMainHandler() {
+        return mainHandler;
     }
 
     // Native method to be implemented in Delphi for receiving the Hello World message
