@@ -10,6 +10,9 @@ public class NativeUssdResponseCallback extends TelephonyManager.UssdResponseCal
 
     // Constructor with NativeUssdLogger and Handler parameters
     public NativeUssdResponseCallback(NativeUssdLogger aLogger, Handler aHandler) {
+        if (aHandler == null) {
+            throw new IllegalArgumentException("Handler cannot be null");
+        }
         this.delphiLogger = aLogger;
         this.mainHandler = aHandler; // Use the handler passed from NativeUssdHandler
     }
